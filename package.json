@@ -16,6 +16,7 @@
     "findup": "^0.1.5",
     "freeport": "^1.0.3",
     "http": "0.0.0",
+    "istanbul": "^0.3.2",
     "launchpad": "nevir/launchpad#paths",
     "lodash": "^2.4.1",
     "resolve": "^1.0.0",

@@ -45,6 +45,7 @@ CLISocket.prototype.observe = function observe(runner) {
   }.bind(this));
 
   runner.on('test end', function(test) {
+    console.log('test end', getTitles(test));
     this.emitEvent('test-end', {
       state:    getState(test),
       test:     getTitles(test),
@@ -54,6 +55,10 @@ CLISocket.prototype.observe = function observe(runner) {
   }.bind(this));
 
   runner.on('end', function() {
+    this.emitEvent('coverage', {
+        coverage: coverage
+    });
+
     this.emitEvent('browser-end');
   }.bind(this));
 };

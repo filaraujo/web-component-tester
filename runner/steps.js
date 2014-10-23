@@ -12,7 +12,9 @@ var async        = require('async');
 var chalk        = require('chalk');
 var express      = require('express');
 var freeport     = require('freeport');
+var fs           = require('fs');
 var http         = require('http');
+var istanbul = require('istanbul');
 var path         = require('path');
 var sauceConnect = require('sauce-connect-launcher');
 var selenium     = require('selenium-standalone');
@@ -26,6 +28,8 @@ var BrowserRunner = require('./browserrunner');
 var CleanKill     = require('./cleankill');
 var browsers      = require('./browsers');
 
+var instrumenter = new istanbul.Instrumenter();
+var instrumentedFiles = {};
 // Steps
 
 function ensureSauceTunnel(options, emitter, done) {
@@ -98,12 +102,38 @@ function startSeleniumServer(options, emitter, done) {
   });
 }
 
+function instrumentAsset(asset, root){
+  var code;
+
+  if(!instrumentedFiles[asset]){
+    code = fs.readFileSync(path.join(root, asset), 'utf8');
+    instrumentedFiles[asset] = instrumenter.instrumentSync(code, asset);
+  }
+
+  return instrumentedFiles[asset];
+}
+
 function startStaticServer(options, emitter, done) {
   freeport(function(error, port) {
     if (error) return done(error);
 
     var app    = express();
     var server = http.createServer(app);
+
+    // coverage
+    app.use(function(request, response, next) {
+      // @TODO - shouldn't instrument all js files - need a clever way to
+      // filter out non test resources
+
+      console.log(request.path);
+
+      // assume that under project directory
+      if(path.extname(request.path) !== '.js'){
+        return next();
+      }
+
+      response.send(instrumentAsset(request.path, options.root));
+    });
 
     app.use(function(request, response, next) {
       emitter.emit('log:debug', chalk.magenta(request.method), request.url);
@@ -164,6 +194,11 @@ function runTests(options, emitter, done) {
       socketIO(results.http).on('connection', function(socket) {
         emitter.emit('log:debug', 'Test client opened sideband socket');
         socket.on('client-event', function(data) {
+
+            if(data.event === 'coverage'){
+                console.log(data);
+            }
+
           runners[data.browserId].onEvent(data.event, data.data);
         });
       });

@@ -113,6 +113,15 @@ SubSuite.prototype.loaded = function(error) {
 
 /** Called when the sub suite's tests are complete, so that it can clean up. */
 SubSuite.prototype.done = function done() {
+
+    var iframeCoverage = this.iframe.contentWindow.__coverage__;
+  Object.keys(iframeCoverage).forEach(function(key){
+      console.log(key);
+
+    window.parent.coverage = window.parent.coverage || {};
+    window.parent.coverage[key] = iframeCoverage[key];
+  });
+
   WCT.util.debug('SubSuite#done', this.url, arguments);
   this.signalRunComplete();
 
